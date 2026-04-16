@@ -1,7 +1,15 @@
+import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const features = [
+interface Feature {
+  icon: ReactNode;
+  title: string;
+  desc: string;
+  color: string;
+}
+
+const features: Feature[] = [
   {
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -5,50 +5,49 @@ import CodeEditor from '../components/CodeEditor';
 import ReviewResult from '../components/ReviewResult';
 import HistoryPanel from '../components/HistoryPanel';
 import UsageBadge from '../components/UsageBadge';
+import type { ReviewFeedback, ReviewRecord } from '../types';
 
 export default function DashboardPage() {
   const { user, usageInfo, setUsageInfo } = useAuth();
 
-  const [feedback, setFeedback] = useState(null);
+  const [feedback, setFeedback] = useState<ReviewFeedback | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedHistoryId, setSelectedHistoryId] = useState(null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
   const [historyKey, setHistoryKey] = useState(0); // force HistoryPanel re-fetch
 
-  const handleSubmit = async (code, language) => {
+  const handleSubmit = async (code: string, language: string) => {
     setLoading(true);
     setError('');
     setFeedback(null);
     setSelectedHistoryId(null);
 
     try {
-      const { data } = await api.post('/api/review', { code, language });
+      const { data } = await api.post<{ feedback: ReviewFeedback; usedToday: number; dailyLimit: number }>('/api/review', { code, language });
       setFeedback(data.feedback);
-      // Update usage badge
-      setUsageInfo({ usedToday: data.usedToday, dailyLimit: data.dailyLimit || 5 });
-      // Refresh history list
+      setUsageInfo({ usedToday: data.usedToday, dailyLimit: data.dailyLimit ?? 5 });
       setHistoryKey((k) => k + 1);
-    } catch (err) {
-      const status = err.response?.status;
-      const msg = err.response?.data?.error;
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { error?: string; upgradeRequired?: boolean; used?: number; limit?: number } } };
+      const status = axiosErr.response?.status;
+      const msg = axiosErr.response?.data?.error;
 
       if (status === 429) {
-        setError(msg || 'Daily review limit reached. Come back tomorrow or upgrade to Pro.');
-        // Update usage from response too
-        if (err.response.data.used) {
-          setUsageInfo({ usedToday: err.response.data.used, dailyLimit: err.response.data.limit });
+        setError(msg ?? 'Daily review limit reached. Come back tomorrow or upgrade to Pro.');
+        if (axiosErr.response?.data?.used) {
+          setUsageInfo({ usedToday: axiosErr.response.data.used, dailyLimit: axiosErr.response.data.limit ?? 5 });
         }
       } else if (status === 500 && msg?.includes('OpenAI')) {
         setError('⚠️ OpenAI API key not configured. Please add your key to server/.env and restart the server.');
       } else {
-        setError(msg || 'Analysis failed. Please try again.');
+        setError(msg ?? 'Analysis failed. Please try again.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectHistory = (review) => {
+  const handleSelectHistory = (review: ReviewRecord) => {
     setSelectedHistoryId(review.id);
     setFeedback(review.ai_feedback);
     setError('');

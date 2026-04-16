@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-const LANGUAGES = [
+interface Language {
+  value: string;
+  label: string;
+}
+
+const LANGUAGES: Language[] = [
   { value: 'auto', label: 'Auto-detect' },
   { value: 'javascript', label: 'JavaScript' },
   { value: 'typescript', label: 'TypeScript' },
@@ -15,11 +20,16 @@ const LANGUAGES = [
   { value: 'sql', label: 'SQL' },
 ];
 
-export default function CodeEditor({ onSubmit, isLoading }) {
+interface CodeEditorProps {
+  onSubmit: (code: string, language: string) => void;
+  isLoading: boolean;
+}
+
+export default function CodeEditor({ onSubmit, isLoading }: CodeEditorProps) {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('auto');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (code.trim() && !isLoading) onSubmit(code, language);
   };

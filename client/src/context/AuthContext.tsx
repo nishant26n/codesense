@@ -6,23 +6,38 @@ import {
   useState,
   useEffect,
   useCallback,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import api from "../api/axios";
+import type { User, UsageInfo } from "../types";
 
-const AuthContext = createContext(null);
+interface AuthContextValue {
+  user: User | null;
+  loading: boolean;
+  usageInfo: UsageInfo;
+  setUsageInfo: Dispatch<SetStateAction<UsageInfo>>;
+  login: (email: string, password: string) => Promise<unknown>;
+  register: (name: string, email: string, password: string) => Promise<unknown>;
+  logout: () => void;
+  refreshUsage: () => Promise<void>;
+}
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem("cs_user");
-      return stored ? JSON.parse(stored) : null;
+      return stored ? (JSON.parse(stored) as User) : null;
     } catch {
       return null;
     }
   });
 
   const [loading, setLoading] = useState(true);
-  const [usageInfo, setUsageInfo] = useState({ usedToday: 0, dailyLimit: 5 });
+  const [usageInfo, setUsageInfo] = useState<UsageInfo>({ usedToday: 0, dailyLimit: 5 });
 
   // Verify token and refresh user info on startup
   useEffect(() => {
@@ -33,9 +48,9 @@ export function AuthProvider({ children }) {
     }
 
     api
-      .get("/api/auth/me")
+      .get<{ id: number; name: string; email: string; tier: 'free' | 'pro'; usedToday: number; dailyLimit: number }>("/api/auth/me")
       .then(({ data }) => {
-        const u = {
+        const u: User = {
           id: data.id,
           name: data.name,
           email: data.email,
@@ -56,20 +71,20 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const saveAuth = (token, userData) => {
+  const saveAuth = (token: string, userData: User) => {
     localStorage.setItem("cs_token", token);
     localStorage.setItem("cs_user", JSON.stringify(userData));
     setUser(userData);
   };
 
-  const login = useCallback(async (email, password) => {
-    const { data } = await api.post("/api/auth/login", { email, password });
+  const login = useCallback(async (email: string, password: string) => {
+    const { data } = await api.post<{ token: string; user: User }>("/api/auth/login", { email, password });
     saveAuth(data.token, data.user);
     return data;
   }, []);
 
-  const register = useCallback(async (name, email, password) => {
-    const { data } = await api.post("/api/auth/register", {
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const { data } = await api.post<{ token: string; user: User }>("/api/auth/register", {
       name,
       email,
       password,
@@ -87,7 +102,7 @@ export function AuthProvider({ children }) {
 
   const refreshUsage = useCallback(async () => {
     try {
-      const { data } = await api.get("/api/auth/me");
+      const { data } = await api.get<{ usedToday: number; dailyLimit: number }>("/api/auth/me");
       setUsageInfo({ usedToday: data.usedToday, dailyLimit: data.dailyLimit });
     } catch {
       // silent
@@ -112,7 +127,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;

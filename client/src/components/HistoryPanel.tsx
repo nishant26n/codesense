@@ -1,9 +1,9 @@
-/* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from "react";
 import api from "../api/axios";
+import type { ReviewRecord } from "../types";
 
-function LanguageDot({ language }) {
-  const colors = {
+function LanguageDot({ language }: { language: string }) {
+  const colors: Record<string, string> = {
     javascript: "bg-yellow-400",
     typescript: "bg-blue-400",
     python: "bg-green-400",
@@ -17,12 +17,12 @@ function LanguageDot({ language }) {
   };
   return (
     <span
-      className={`inline-block w-2 h-2 rounded-full ${colors[language?.toLowerCase()] || "bg-gray-500"} shrink-0`}
+      className={`inline-block w-2 h-2 rounded-full ${colors[language?.toLowerCase()] ?? "bg-gray-500"} shrink-0`}
     />
   );
 }
 
-function ScoreBadge({ score }) {
+function ScoreBadge({ score }: { score: number }) {
   const color =
     score >= 90
       ? "text-green-400"
@@ -36,7 +36,7 @@ function ScoreBadge({ score }) {
   );
 }
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return "just now";
@@ -46,18 +46,23 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function HistoryPanel({ onSelectReview, selectedId }) {
-  const [reviews, setReviews] = useState([]);
+interface HistoryPanelProps {
+  onSelectReview: (review: ReviewRecord) => void;
+  selectedId: number | null;
+}
+
+export default function HistoryPanel({ onSelectReview, selectedId }: HistoryPanelProps) {
+  const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/api/review/history?limit=30");
-      setReviews(data.reviews || []);
+      const { data } = await api.get<{ reviews: ReviewRecord[] }>("/api/review/history?limit=30");
+      setReviews(data.reviews ?? []);
       setError("");
-    } catch (err) {
+    } catch {
       setError("Failed to load history.");
     } finally {
       setLoading(false);
@@ -139,11 +144,11 @@ export default function HistoryPanel({ onSelectReview, selectedId }) {
         ) : (
           <div className="p-2 flex flex-col gap-1">
             {reviews.map((review) => {
-              const feedback = review.ai_feedback || {};
+              const feedback = review.ai_feedback ?? {};
               const issueCount =
-                (feedback.bugs?.length || 0) +
-                (feedback.performance?.length || 0) +
-                (feedback.security?.length || 0);
+                (feedback.bugs?.length ?? 0) +
+                (feedback.performance?.length ?? 0) +
+                (feedback.security?.length ?? 0);
 
               return (
                 <button

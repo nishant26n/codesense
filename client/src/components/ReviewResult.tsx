@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import type { ReviewFeedback, ReviewFinding } from '../types';
 
-function ScoreRing({ score }) {
+function ScoreRing({ score }: { score: number }) {
   const radius = 36;
   const circ = 2 * Math.PI * radius;
   const offset = circ - (score / 100) * circ;
@@ -35,19 +36,22 @@ function ScoreRing({ score }) {
   );
 }
 
-function FindingCard({ item, type }) {
-  const severityClass = {
+type FindingType = 'bugs' | 'performance' | 'security';
+
+function FindingCard({ item, type }: { item: ReviewFinding; type: FindingType }) {
+  const severityClass: Record<string, string> = {
     high: 'severity-high',
     medium: 'severity-medium',
     low: 'severity-low',
-  }[item.severity?.toLowerCase()] || 'severity-low';
+  };
+  const appliedSeverityClass = severityClass[item.severity?.toLowerCase()] ?? 'severity-low';
 
   const iconColorClass =
     type === 'bugs' ? 'bg-red-500/10 text-red-400' :
     type === 'performance' ? 'bg-amber-500/10 text-amber-400' :
     'bg-blue-500/10 text-blue-400';
 
-  const icons = {
+  const icons: Record<FindingType, React.ReactNode> = {
     bugs: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -74,7 +78,7 @@ function FindingCard({ item, type }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <h4 className="font-semibold text-sm text-white">{item.title}</h4>
-            <span className={severityClass}>{item.severity}</span>
+            <span className={appliedSeverityClass}>{item.severity}</span>
             {item.line && (
               <span className="text-xs text-gray-500 font-mono">Line {item.line}</span>
             )}
@@ -85,7 +89,7 @@ function FindingCard({ item, type }) {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                 {item.fix ? '💡 Fix' : '⚡ Suggestion'}
               </p>
-              <p className="text-xs text-gray-300 leading-relaxed">{item.fix || item.suggestion}</p>
+              <p className="text-xs text-gray-300 leading-relaxed">{item.fix ?? item.suggestion}</p>
             </div>
           )}
         </div>
@@ -94,7 +98,7 @@ function FindingCard({ item, type }) {
   );
 }
 
-function Section({ title, items, type }) {
+function Section({ title, items, type }: { title: string; items: ReviewFinding[] | undefined; type: FindingType }) {
   if (!items || items.length === 0) {
     return (
       <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/5 border border-green-500/10">
@@ -115,23 +119,23 @@ function Section({ title, items, type }) {
   );
 }
 
-export default function ReviewResult({ feedback }) {
+export default function ReviewResult({ feedback }: { feedback: ReviewFeedback | null }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!feedback) return null;
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
-    { id: 'bugs', label: `Bugs (${feedback.bugs?.length || 0})` },
-    { id: 'performance', label: `Performance (${feedback.performance?.length || 0})` },
-    { id: 'security', label: `Security (${feedback.security?.length || 0})` },
+    { id: 'bugs', label: `Bugs (${feedback.bugs?.length ?? 0})` },
+    { id: 'performance', label: `Performance (${feedback.performance?.length ?? 0})` },
+    { id: 'security', label: `Security (${feedback.security?.length ?? 0})` },
   ];
 
-  const totalIssues = (feedback.bugs?.length || 0) + (feedback.performance?.length || 0) + (feedback.security?.length || 0);
+  const totalIssues = (feedback.bugs?.length ?? 0) + (feedback.performance?.length ?? 0) + (feedback.security?.length ?? 0);
   const highCount = [
-    ...(feedback.bugs || []),
-    ...(feedback.performance || []),
-    ...(feedback.security || []),
+    ...(feedback.bugs ?? []),
+    ...(feedback.performance ?? []),
+    ...(feedback.security ?? []),
   ].filter(i => i.severity?.toLowerCase() === 'high').length;
 
   return (
@@ -140,7 +144,7 @@ export default function ReviewResult({ feedback }) {
       <div className="bg-gradient-to-r from-brand-900/40 to-surface-800/40 px-5 py-4 border-b border-white/[0.06]">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <ScoreRing score={feedback.score || 0} />
+            <ScoreRing score={feedback.score ?? 0} />
             <div>
               <h3 className="text-white font-semibold text-base mb-1">Analysis Complete</h3>
               <p className="text-sm text-gray-400 max-w-md leading-relaxed">{feedback.summary}</p>
@@ -184,15 +188,15 @@ export default function ReviewResult({ feedback }) {
             {/* Stats grid */}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-center">
-                <div className="text-2xl font-bold text-red-400">{feedback.bugs?.length || 0}</div>
+                <div className="text-2xl font-bold text-red-400">{feedback.bugs?.length ?? 0}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Bugs</div>
               </div>
               <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
-                <div className="text-2xl font-bold text-amber-400">{feedback.performance?.length || 0}</div>
+                <div className="text-2xl font-bold text-amber-400">{feedback.performance?.length ?? 0}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Performance</div>
               </div>
               <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
-                <div className="text-2xl font-bold text-blue-400">{feedback.security?.length || 0}</div>
+                <div className="text-2xl font-bold text-blue-400">{feedback.security?.length ?? 0}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Security</div>
               </div>
             </div>
