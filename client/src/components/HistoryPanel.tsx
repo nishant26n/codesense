@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import api from "../api/axios";
+import { useReviewHistory } from "../api/queries";
 import type { ReviewRecord } from "../types";
 
 function LanguageDot({ language }: { language: string }) {
@@ -52,39 +51,20 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ onSelectReview, selectedId }: HistoryPanelProps) {
-  const [reviews, setReviews] = useState<ReviewRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const fetchHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get<{ reviews: ReviewRecord[] }>("/api/review/history?limit=30");
-      setReviews(data.reviews ?? []);
-      setError("");
-    } catch {
-      setError("Failed to load history.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const { data: reviews = [], isLoading, isError, refetch, isFetching } = useReviewHistory();
 
   return (
     <div className="glass-card flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <h3 className="text-sm font-semibold text-gray-300">Review History</h3>
         <button
-          onClick={fetchHistory}
-          disabled={loading}
+          onClick={() => refetch()}
+          disabled={isFetching}
           className="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-surface-700"
           title="Refresh"
         >
           <svg
-            className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+            className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -100,7 +80,7 @@ export default function HistoryPanel({ onSelectReview, selectedId }: HistoryPane
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading && reviews.length === 0 ? (
+        {isLoading ? (
           <div className="flex flex-col gap-2 p-4">
             {[...Array(5)].map((_, i) => (
               <div
@@ -109,11 +89,11 @@ export default function HistoryPanel({ onSelectReview, selectedId }: HistoryPane
               />
             ))}
           </div>
-        ) : error ? (
+        ) : isError ? (
           <div className="p-4 text-center">
-            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-sm text-red-400">Failed to load history.</p>
             <button
-              onClick={fetchHistory}
+              onClick={() => refetch()}
               className="text-xs text-brand-400 mt-2 hover:underline"
             >
               Retry

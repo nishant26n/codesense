@@ -85,12 +85,7 @@ router.get('/me', require('../middleware/auth'), (req, res) => {
   const user = db.prepare('SELECT id, name, email, tier, created_at FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found.' });
 
-  // Get today's usage
-  const today = new Date().toISOString().slice(0, 10);
-  const usage = db.prepare('SELECT * FROM usage WHERE user_id = ?').get(req.user.id);
-  const usedToday = (usage && usage.day === today) ? usage.review_count : 0;
-
-  res.json({ ...user, usedToday, dailyLimit: 5 });
+  res.json({ ...user });
 });
 
 module.exports = router;

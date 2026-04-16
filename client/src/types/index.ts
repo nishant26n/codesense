@@ -5,11 +5,6 @@ export interface User {
   tier: 'free' | 'pro';
 }
 
-export interface UsageInfo {
-  usedToday: number;
-  dailyLimit: number;
-}
-
 export interface ReviewFinding {
   title: string;
   description: string;
@@ -27,6 +22,7 @@ export interface ReviewFeedback {
   performance: ReviewFinding[];
   security: ReviewFinding[];
   improvements: string[];
+  correctedCode?: string;
 }
 
 export interface ReviewRecord {

@@ -1,6 +1,38 @@
 import { useState } from 'react';
 import type { ReviewFeedback, ReviewFinding } from '../types';
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <button
+      onClick={copy}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-surface-600 hover:bg-surface-500 text-gray-300 transition-colors"
+    >
+      {copied ? (
+        <>
+          <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          Copied
+        </>
+      ) : (
+        <>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+          </svg>
+          Copy
+        </>
+      )}
+    </button>
+  );
+}
+
 function ScoreRing({ score }: { score: number }) {
   const radius = 36;
   const circ = 2 * Math.PI * radius;
@@ -129,6 +161,7 @@ export default function ReviewResult({ feedback }: { feedback: ReviewFeedback | 
     { id: 'bugs', label: `Bugs (${feedback.bugs?.length ?? 0})` },
     { id: 'performance', label: `Performance (${feedback.performance?.length ?? 0})` },
     { id: 'security', label: `Security (${feedback.security?.length ?? 0})` },
+    { id: 'fixed', label: 'Fixed Code' },
   ];
 
   const totalIssues = (feedback.bugs?.length ?? 0) + (feedback.performance?.length ?? 0) + (feedback.security?.length ?? 0);
@@ -233,6 +266,29 @@ export default function ReviewResult({ feedback }: { feedback: ReviewFeedback | 
         {activeTab === 'security' && (
           <div className="animate-fade-in">
             <Section title="Security Issues" items={feedback.security} type="security" />
+          </div>
+        )}
+
+        {activeTab === 'fixed' && (
+          <div className="animate-fade-in">
+            {feedback.correctedCode ? (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-gray-500">All issues fixed · ready to use</p>
+                  <CopyButton text={feedback.correctedCode} />
+                </div>
+                <pre className="bg-surface-900 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-xs text-gray-300 font-mono leading-relaxed whitespace-pre-wrap break-words">
+                  {feedback.correctedCode}
+                </pre>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+                <svg className="w-4 h-4 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs text-green-400 font-medium">No corrections needed — code looks good</span>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,13 +1,12 @@
 const express = require('express');
 const db = require('../db/database');
 const authMiddleware = require('../middleware/auth');
-const rateLimitMiddleware = require('../middleware/rateLimit');
-const { analyzeCode } = require('../services/openai');
+const { analyzeCode } = require('../services/openrouter');
 
 const router = express.Router();
 
 // POST /api/review — Submit code for analysis
-router.post('/', authMiddleware, rateLimitMiddleware, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { code, language = 'auto' } = req.body;
 
@@ -35,16 +34,9 @@ router.post('/', authMiddleware, rateLimitMiddleware, async (req, res) => {
         feedback.score || null
       );
 
-    // Return today's usage info
-    const today = new Date().toISOString().slice(0, 10);
-    const usage = db.prepare('SELECT * FROM usage WHERE user_id = ?').get(req.user.id);
-    const usedToday = usage && usage.day === today ? usage.review_count : 0;
-
     return res.json({
       reviewId: result.lastInsertRowid,
       feedback,
-      usedToday,
-      dailyLimit: req.user.tier === 'pro' ? null : 5,
     });
   } catch (err) {
     console.error('Review error:', err);
@@ -55,8 +47,8 @@ router.post('/', authMiddleware, rateLimitMiddleware, async (req, res) => {
     }
 
     // OpenAI API error
-    if (err?.status === 401) {
-      return res.status(500).json({ error: 'OpenAI API key is invalid. Please check server configuration.' });
+    if (err?.status === 401 || err?.message?.includes('API_KEY_INVALID')) {
+      return res.status(500).json({ error: 'Gemini API key is invalid. Please check server configuration.' });
     }
 
     return res.status(500).json({ error: 'Analysis failed. Please try again.' });
